@@ -1,0 +1,20 @@
+============================================================
+DICOM Metadata
+============================================================
+  Patient Name.................. 
+  Patient ID.................... 
+  Patient Age................... N/A
+  Patient Sex................... 
+  Modality...................... MR
+  Study Description............. 
+  Series Description............ N/A
+  Institution................... N/A
+  Manufacturer.................. 
+  Study Date.................... 
+  Image Size.................... 512 x 512 x 76 frames
+  Pixel Spacing................. N/A
+  Bits Allocated................ 16
+  Bits Stored................... 16
+  Number of Frames.............. 76
+  Rows.......................... 512
+  Columns....................... 512
