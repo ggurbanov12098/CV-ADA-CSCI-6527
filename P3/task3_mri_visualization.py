@@ -112,11 +112,12 @@ def visualise_single_frame(pixel_array: np.ndarray, output_dir: str) -> None:
     auto_centre = (p_low + p_high) / 2
     auto_width = p_high - p_low
 
+    m_max = pixel_array.max()
     windows = {
         "Auto (1-99 percentile)":  (auto_centre, auto_width),
-        "Soft Tissue (W=400 C=40)": (40, 400),
-        "Bone (W=2000 C=500)":      (500, 2000),
-        "Full Range":               (pixel_array.max() / 2, pixel_array.max()),
+        "Soft Tissue (Relative)":  (m_max * 0.40, m_max * 0.40),
+        "Bone (Relative)":         (m_max * 0.20, m_max * 0.35),
+        "Full Range":              (m_max / 2, m_max),
     }
 
     fig, axes = plt.subplots(1, len(windows), figsize=(5 * len(windows), 5))

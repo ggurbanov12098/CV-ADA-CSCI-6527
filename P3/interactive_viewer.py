@@ -190,11 +190,12 @@ def launch_mri_viewer():
     ax_radio = plt.axes([0.80, 0.30, 0.18, 0.30])
     radio = RadioButtons(ax_radio, ("Auto", "Soft Tissue", "Bone", "Full Range"))
 
+    m_max = pixel_array.max()
     presets = {
         "Auto":        ((p_lo + p_hi) / 2, p_hi - p_lo),
-        "Soft Tissue": (40, 400),
-        "Bone":        (500, 2000),
-        "Full Range":  (pixel_array.max() / 2, pixel_array.max()),
+        "Soft Tissue": (m_max * 0.40, m_max * 0.40),
+        "Bone":        (m_max * 0.20, m_max * 0.35),
+        "Full Range":  (m_max / 2, m_max),
     }
 
     def update(_=None):
