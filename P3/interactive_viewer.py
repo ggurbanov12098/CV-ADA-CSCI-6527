@@ -88,7 +88,7 @@ def combined_pipeline(img):
     MIN_AREA = 10
     filtered = np.zeros_like(dilated)
     for i in range(1, num_labels):
-        if stats[i, cv2.CC_STAT_AREA] >= MIN_AREA:
+        if stats[i, cv2.CC_STAT_AREA] >= MIN_AREA:  # Keep only large components
             filtered[labels == i] = 255
 
     eroded = cv2.erode(filtered, small_se, iterations=1)
@@ -97,35 +97,35 @@ def combined_pipeline(img):
 
 def _crimmins_pass(img, dr, dc):
     h, w = img.shape
-    out = img.astype(np.float64).copy()
-    r0, r1 = max(0, -dr), h - max(0, dr)
-    c0, c1 = max(0, -dc), w - max(0, dc)
-    centre = out[r0:r1, c0:c1]
-    neighbour = out[r0+dr:r1+dr, c0+dc:c1+dc]
-    diff = neighbour - centre
-    centre[diff > 0] += 1
-    centre[diff < 0] -= 1
+    out = img.astype(np.float64).copy()     # use float for intermediate calculations to avoid overflow/underflow issues during the +1/-1 adjustments
+    r0, r1 = max(0, -dr), h - max(0, dr)    # calculate valid row range for centre and neighbour based on the direction of the pass (dr, dc)
+    c0, c1 = max(0, -dc), w - max(0, dc)    # calculate valid column range for centre and neighbour similarly
+    centre = out[r0:r1, c0:c1]              # the "centre" pixels that we will adjust based on their neighbours
+    neighbour = out[r0+dr:r1+dr, c0+dc:c1+dc]   # the "neighbour" pixels that we compare against the centre to decide whether to brighten or darken the centre pixel
+    diff = neighbour - centre               # calculate the difference between neighbour and centre; if >0, neighbour is brighter and we want to brighten centre; if <0, neighbour is darker and we want to darken centre
+    centre[diff > 0] += 1               # brighten centre pixels where neighbour is brighter
+    centre[diff < 0] -= 1               # darken centre pixels where neighbour is darker
     return np.clip(out, 0, 255).astype(np.uint8)
 
 
 def crimmins_filter(img, iters=CRIMMINS_ITERS):
-    dirs = [(-1,0),(-1,1),(0,1),(1,1),(1,0),(1,-1),(0,-1),(-1,-1)]
-    result = img.copy()
+    dirs = [(-1,0),(-1,1),(0,1),(1,1),(1,0),(1,-1),(0,-1),(-1,-1)]  # 8-connected neighborhood
+    result = img.copy() # start with original image, then iteratively apply Crimmins passes in all 8 directions
     for _ in range(iters):
         for d in dirs:
-            result = _crimmins_pass(result, *d)
+            result = _crimmins_pass(result, *d) # each pass modifies the image based on the current state, so we update 'result' in-place for the next pass
     return result
 
 
 def fft_lowpass(img, cutoff_ratio=0.08):
-    rows, cols = img.shape
-    crow, ccol = rows // 2, cols // 2
-    radius = int(cutoff_ratio * np.sqrt(rows**2 + cols**2))
-    f = np.fft.fftshift(np.fft.fft2(img.astype(np.float64)))
-    y, x = np.ogrid[:rows, :cols]
-    mask = (np.sqrt((y - crow)**2 + (x - ccol)**2) <= radius).astype(np.float64)
-    result = np.abs(np.fft.ifft2(np.fft.ifftshift(f * mask)))
-    return np.clip(result, 0, 255).astype(np.uint8)
+    rows, cols = img.shape                                      # image dimensions
+    crow, ccol = rows // 2, cols // 2                           # center of the frequency domain
+    radius = int(cutoff_ratio * np.sqrt(rows**2 + cols**2))     # cutoff radius as a fraction of the diagonal
+    f = np.fft.fftshift(np.fft.fft2(img.astype(np.float64)))    # shift zero-freq to center, compute 2D FFT, convert to float for precision
+    y, x = np.ogrid[:rows, :cols]                               # create coordinate grid for mask
+    mask = (np.sqrt((y - crow)**2 + (x - ccol)**2) <= radius).astype(np.float64)    # circular low-pass mask
+    result = np.abs(np.fft.ifft2(np.fft.ifftshift(f * mask)))   # magnitude of complex result, back to spatial domain
+    return np.clip(result, 0, 255).astype(np.uint8)             # ensure output is valid uint8 image
 
 
 def unsharp_mask(img, sigma=2.0, strength=0.7):
@@ -276,12 +276,12 @@ def launch_chemical_viewer():
     draw_images()
 
     # Image selector
-    ax_img_radio = plt.axes([0.74, 0.55, 0.24, 0.35])
+    ax_img_radio = plt.axes([0.74, 0.55, 0.24, 0.35])   # [left, bottom, width, height]
     ax_img_radio.set_title("Image", fontsize=10, fontweight="bold")
     radio_img = RadioButtons(ax_img_radio, names)
 
     # Filter selector
-    ax_flt_radio = plt.axes([0.74, 0.10, 0.24, 0.40])
+    ax_flt_radio = plt.axes([0.74, 0.10, 0.24, 0.40])   # [left, bottom, width, height]
     ax_flt_radio.set_title("Filter", fontsize=10, fontweight="bold")
     radio_flt = RadioButtons(ax_flt_radio, filters[1:])  # exclude "Original"
 
@@ -295,8 +295,8 @@ def launch_chemical_viewer():
         cur_filter = label
         draw_images()
 
-    radio_img.on_clicked(on_img)
-    radio_flt.on_clicked(on_flt)
+    radio_img.on_clicked(on_img)    # when user clicks an image name, update current image and redraw
+    radio_flt.on_clicked(on_flt)    # when user clicks a filter name, update current filter and redraw
 
     plt.show()
 
@@ -317,12 +317,12 @@ def launch_speckle_viewer():
         orig = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
         if orig is None:
             continue
-        cr = crimmins_filter(orig)
+        cr = crimmins_filter(orig) # computationally expensive, so we do it once at startup
         images[name] = {
-            "Original":           orig,
-            "Crimmins":           cr,
-            "FFT Lowpass":        fft_lowpass(orig),
-            "Crimmins + Unsharp": unsharp_mask(cr),
+            "Original":           orig,                 # the noisy input image
+            "Crimmins":           cr,                   # the "gold standard" from the task, but slow to compute on-the-fly
+            "FFT Lowpass":        fft_lowpass(orig),    # not great but shows the concept of frequency-domain filtering
+            "Crimmins + Unsharp": unsharp_mask(cr),     # a simple enhancement to the Crimmins result to show how you can build on it
         }
         print(f"    ✓ {name}")
 
@@ -357,14 +357,14 @@ def launch_speckle_viewer():
     draw_images()
 
     # Image selector
-    ax_img_radio = plt.axes([0.74, 0.55, 0.24, 0.35])
+    ax_img_radio = plt.axes([0.74, 0.55, 0.24, 0.35]) # [left, bottom, width, height]
     ax_img_radio.set_title("Image", fontsize=10, fontweight="bold")
     radio_img = RadioButtons(ax_img_radio, names)
 
     # Filter selector
-    ax_flt_radio = plt.axes([0.74, 0.15, 0.24, 0.35])
+    ax_flt_radio = plt.axes([0.74, 0.15, 0.24, 0.35]) # [left, bottom, width, height]
     ax_flt_radio.set_title("Method", fontsize=10, fontweight="bold")
-    radio_flt = RadioButtons(ax_flt_radio, filters[1:])
+    radio_flt = RadioButtons(ax_flt_radio, filters[1:]) # exclude "Original"
 
     def on_img(label):
         nonlocal cur_name
@@ -412,7 +412,7 @@ def main():
             launch_chemical_viewer()
             launch_speckle_viewer()
         elif choice == "q":
-            print("Goodbye!")
+            print("Quitting, goodbye!")
             break
         else:
             print("  Invalid choice. Try 1, 2, 3, a, or q.")

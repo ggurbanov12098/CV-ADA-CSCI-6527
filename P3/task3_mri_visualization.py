@@ -174,10 +174,10 @@ def visualise_multi_frame(pixel_array: np.ndarray, output_dir: str) -> None:
     print(f"  ✓ Slice grid figure → {out_path}")
 
     # Save a few individual slices
-    key_indices = [0, n_frames // 4, n_frames // 2, 3 * n_frames // 4, n_frames - 1]
+    key_indices = [0, n_frames // 4, n_frames // 2, 3 * n_frames // 4, n_frames - 1] # first, 25%, 50%, 75%, last
     for idx in key_indices:
         frame = pixel_array[idx]
-        p_low, p_high = np.percentile(frame, [1, 99])
+        p_low, p_high = np.percentile(frame, [1, 99]) # auto window for each slice
         img = apply_window(frame.astype(np.float64), (p_low + p_high) / 2, p_high - p_low)
 
         fig_s, ax_s = plt.subplots(figsize=(5, 5))
@@ -222,7 +222,7 @@ def main() -> None:
     # Visualise
     if pixel_array.ndim == 3:
         print(f"\n  Multi-frame image with {pixel_array.shape[0]} frames/slices.")
-        visualise_multi_frame(pixel_array, OUTPUT_DIR)
+        visualise_multi_frame(pixel_array, OUTPUT_DIR)  # Grid of slices + key individual slices
         # Also show windowed version of a middle slice
         mid = pixel_array.shape[0] // 2
         visualise_single_frame(pixel_array[mid], OUTPUT_DIR)

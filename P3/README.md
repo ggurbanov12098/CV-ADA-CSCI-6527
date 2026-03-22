@@ -37,36 +37,6 @@ pip install -r requirements.txt
 
 > **Note:** Run all Python scripts from the root directory of the repository.
 
-<details>
-<summary><b>Detailed Docker Guide (For Beginners) (Click to expand)</b></summary>
-
-### Running Without Local Dependencies
-If you have trouble installing OpenCV or prefer not to clutter your host machine, you can run the entire automated image processing suite using Docker. 
-
-When you build the container, it automatically sets up a headless Python environment with `libgl1` (required for image processing). The container is configured with a default entrypoint script (`run_all.sh`) that executes Task 1, Task 2, and Task 3 sequentially.
-
-#### 1. Build the Docker Image
-First, build the Docker container image on your computer. Make sure you are in the project folder!
-```bash
-docker build -t a3-image-processing .
-```
-
-#### 2. Run All Automated Tasks
-To run the container and actually *see* the generated images, you must "mount" the `output/` directory from the container to your local host folder. 
-
-Run this exact command. It will execute the `run_all.sh` script automatically:
-```bash
-docker run --rm -v "$(pwd)/output:/app/output" a3-image-processing
-```
-
-When it finishes, simply open the `output/` folder on your computer to view all the freshly generated comparison images and DICOM metadata!
-
-> *(Note: The interactive GUI viewer `interactive_viewer.py` requires an X11 display interface, so it cannot be run in this headless Docker mode. Use the Local Virtual Environment to use the GUI.)*
-
-</details>
-
----
-
 ## Technical Details & Examples
 
 <details>
@@ -130,8 +100,8 @@ Processing raw DICOM data requires interpreting Hounsfield Units (or equivalent 
 
 Using `pydicom`, the pipeline parses the complex metadata (printing parameters to `metadata.txt`) and renders the multi-frame slices. We apply distinct **Window/Level Presets** to highlight specific structural tissues:
 - **Auto**: Stretches the 1st-99th percentile across the visual scale.
-- **Soft Tissue**: Focuses the window narrowly (`Width=400, Center=40`) to highlight fleshy structures.
-- **Bone**: Widens and shifts the window (`Width=2000, Center=500`) to expose high-density osseous structures.
+- **Soft Tissue**: Focuses the window narrowly to highlight fleshy structures.
+- **Bone**: Widens and shifts the window to expose high-density osseous structures.
 
 ### Visual Example
 ![MRI Visualisation Example](output/task3/mri_windows.png)

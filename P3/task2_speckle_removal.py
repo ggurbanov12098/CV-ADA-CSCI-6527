@@ -116,8 +116,8 @@ def _crimmins_pass_fast(img: np.ndarray, dr: int, dc: int) -> np.ndarray:
     c_start = max(0, -dc)
     c_end   = w - max(0, dc)
 
-    centre = out[r_start:r_end, c_start:c_end]
-    neighbour = out[r_start + dr:r_end + dr, c_start + dc:c_end + dc]
+    centre = out[r_start:r_end, c_start:c_end] # View of the central pixels being updated
+    neighbour = out[r_start + dr:r_end + dr, c_start + dc:c_end + dc] # Shifted view of the neighbour pixels
 
     diff = neighbour - centre
     centre[diff > 0] += 1
@@ -131,13 +131,13 @@ def crimmins_speckle_removal_fast(
 ) -> np.ndarray:
     """Vectorised Crimmins speckle removal (recommended for real usage)."""
     directions = [
-        (-1,  0), (-1,  1), ( 0,  1), ( 1,  1),
-        ( 1,  0), ( 1, -1), ( 0, -1), (-1, -1),
+        (-1,  0), (-1,  1), ( 0,  1), ( 1,  1), # S, SE, E, NE
+        ( 1,  0), ( 1, -1), ( 0, -1), (-1, -1), # N, NW, W, SW
     ]
     result = img.copy()
     for i in range(iterations):
         for dr, dc in directions:
-            result = _crimmins_pass_fast(result, dr, dc)
+            result = _crimmins_pass_fast(result, dr, dc) # Much faster than the naive version
         print(f"    Crimmins (fast) iteration {i + 1}/{iterations} complete")
     return result
 
@@ -163,14 +163,14 @@ def fft_lowpass_filter(
     radius = int(cutoff_ratio * np.sqrt(rows**2 + cols**2))
 
     # Forward FFT
-    f_transform = np.fft.fft2(img.astype(np.float64))
-    f_shift = np.fft.fftshift(f_transform)
+    f_transform = np.fft.fft2(img.astype(np.float64))   # Compute 2D FFT
+    f_shift = np.fft.fftshift(f_transform)          # Shift zero-freq to centre
 
     # Circular lowpass mask
     mask = np.zeros((rows, cols), dtype=np.float64)
-    y, x = np.ogrid[:rows, :cols]
-    dist = np.sqrt((y - crow) ** 2 + (x - ccol) ** 2)
-    mask[dist <= radius] = 1.0
+    y, x = np.ogrid[:rows, :cols]                       # Create coordinate grid
+    dist = np.sqrt((y - crow) ** 2 + (x - ccol) ** 2)   # Distance from centre
+    mask[dist <= radius] = 1.0          # Preserve low frequencies within radius
 
     # Apply mask and inverse FFT
     f_filtered = f_shift * mask
